@@ -60,6 +60,27 @@ create or replace package body pkg_fernet as
     return utl_encode.base64_decode(utl_i18n.string_to_raw(replace(replace(p_input, '-', '+'), '_', '/'), 'AL32UTF8'));
   end base64url_decode;
 
+  function is_base64url(p_string in varchar2) return boolean is
+  begin
+    if p_string is null then
+      return false;
+    end if;
+
+    if mod(length(p_string), 4) != 0 then
+      return false;
+    end if;
+
+    if not regexp_like(replace(replace(p_string, '-', '+'), '_', '/'), '^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$') then
+      return false;
+    end if;
+
+    if not regexp_like(p_string, '^([A-Za-z0-9]|\-|\_|=)+$') then
+      return false;
+    end if;
+
+    return true;
+  end is_base64url;
+
   function encrypt(p_key in varchar2, p_data in varchar2) return varchar2 is
     c_version        constant raw(1) := hextoraw(to_char('128', 'fmxxx'));
     --
@@ -77,11 +98,19 @@ create or replace package body pkg_fernet as
     l_basic_parts    raw(32760);
     l_hmac           raw(32);
   begin
-    l_key := base64url_decode(p_key); -- Decode base64url key
+    begin
+      if is_base64url(p_key) then
+        l_key := base64url_decode(p_key);
 
-    if utl_raw.length(l_key) != 32 then
+        if utl_raw.length(l_key) != 32 then
+          raise dbms_crypto.KeyBadSize;
+        end if;
+      else
+        raise dbms_crypto.KeyBadSize;
+      end if;
+    exception when others then
       raise_application_error(-20001, 'Fernet key must be 32 url-safe base64-encoded bytes.');
-    end if;
+    end;
 
     l_signing_key    := utl_raw.substr(r => l_key, pos => 1,  len => 16);
     l_encryption_key := utl_raw.substr(r => l_key, pos => 17, len => 16);
@@ -127,20 +156,27 @@ create or replace package body pkg_fernet as
     l_key            raw(2000);
     l_signing_key    raw(16);
     l_encryption_key raw(16);
-    --
-    
   begin
-    if p_token is null then
-      raise_application_error(-20001, 'Token cannot be null');
+    if is_base64url(p_token) then
+      l_data := base64url_decode(p_token);
+    else
+      raise_application_error(-20001, 'Token must be base64url encoded');
     end if;
 
     begin
-      l_data := base64url_decode(p_token);
+      if is_base64url(p_key) then
+        l_key := base64url_decode(p_key);
+
+        if utl_raw.length(l_key) != 32 then
+          raise dbms_crypto.KeyBadSize;
+        end if;
+      else
+        raise dbms_crypto.KeyBadSize;
+      end if;
     exception when others then
-      raise_application_error(-20001, 'Token is not base64url');
+      raise_application_error(-20001, 'Fernet key must be 32 url-safe base64-encoded bytes.');
     end;
 
-    l_key := base64url_decode(p_key); -- Decode base64url key
     l_signing_key    := utl_raw.substr(r => l_key, pos => 1,  len => 16);
     l_encryption_key := utl_raw.substr(r => l_key, pos => 17, len => 16);
 
@@ -153,7 +189,7 @@ create or replace package body pkg_fernet as
     l_hmac       := utl_raw.substr(r => l_data, pos => l_length - 32 + 1, len => 32);
 
     -- Check version
-    if rawtohex(l_version) not in ('80') then
+    if rawtohex(l_version) not in (hextoraw('80')) then
       raise_application_error(-20001, 'Invalid Fernet version');
     end if;
 
