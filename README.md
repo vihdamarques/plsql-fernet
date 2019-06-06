@@ -7,7 +7,10 @@ PL/SQL implementation of the Fernet symetric encryption method
       l_cipher    varchar2(32000);
       l_plaintext varchar2(32000);
     begin
+      -- You can generate a random strong key (recommended)
       l_key := pkg_fernet.generate_key;
+      -- or you can use any custom key you want, however you must encode it to enforce the compatibility with the algorithm
+      --l_key := pkg_fernet.encode_key('anykey123##');
       dbms_output.put_line('key: ' || l_key);
 
       l_cipher := pkg_fernet.encrypt(l_key, 'Crypto Test');
