@@ -2,7 +2,10 @@
 PL/SQL implementation of the Fernet symetric encryption method
 
 ## Compatibility
-This code can be used in Oracle 10g+ database, in a DBMS_CRYPTO execute granted schema.
+This package can be used on Oracle 10g+ database in a DBMS_CRYPTO execute granted schema.
+If you schema doen't have the permissions, you can grant it using the following command as sysdba:
+
+    grant execute on sys.dbms_crypto to SCHEMA;
 
 ## Example
     declare
