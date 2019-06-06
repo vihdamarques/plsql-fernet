@@ -118,7 +118,7 @@ create or replace package body pkg_fernet as
     l_current_time := hextoraw(lpad(to_char(date_to_unix_timestamp(sysdate), 'FMXXXXXXXXXXXXXXXX'), 16, '0'));
     l_iv           := dbms_crypto.randombytes(16);
 
-    l_data         := utl_i18n.string_to_raw(p_data, 'AL32UTF8');
+    l_data        := utl_i18n.string_to_raw(p_data, 'AL32UTF8');
     l_padded_data := pkcs7_pad(l_data, 16);
 
     l_ciphertext := dbms_crypto.encrypt (
@@ -131,11 +131,11 @@ create or replace package body pkg_fernet as
                     );
 
     l_basic_parts := utl_raw.concat (
-                      c_version,
-                      l_current_time,
-                      l_iv,
-                      l_ciphertext
-                    );
+                       c_version,
+                       l_current_time,
+                       l_iv,
+                       l_ciphertext
+                     );
 
     l_hmac := sha256.hmac_sha256_raw(p_text => l_basic_parts, p_key => l_signing_key);
 
@@ -189,7 +189,7 @@ create or replace package body pkg_fernet as
     l_hmac       := utl_raw.substr(r => l_data, pos => l_length - 32 + 1, len => 32);
 
     -- Check version
-    if rawtohex(l_version) not in (hextoraw('80')) then
+    if rawtohex(l_version) not in ('80') then
       raise_application_error(-20001, 'Invalid Fernet version');
     end if;
 
