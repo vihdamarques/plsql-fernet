@@ -537,8 +537,12 @@ create or replace PACKAGE BODY SHA256 IS
           to_char(res(6),'FM0xxxxxxx') ||
           to_char(res(7),'FM0xxxxxxx');
   END;
-
   FUNCTION HMAC_SHA256(P_TEXT IN VARCHAR2, P_KEY IN VARCHAR2) RETURN VARCHAR2 is
+  BEGIN
+    return utl_raw.cast_to_varchar2(HMAC_SHA256_RAW(utl_raw.cast_to_raw(p_text), utl_raw.cast_to_raw(p_key)));
+  END HMAC_SHA256;
+
+  FUNCTION HMAC_SHA256_RAW(P_TEXT IN RAW, P_KEY IN RAW) RETURN RAW IS
     -- pad const
     c_opad      raw(1) := '5C';
     c_ipad      raw(1) := '36';
@@ -555,22 +559,24 @@ create or replace PACKAGE BODY SHA256 IS
     l_opad := utl_raw.copies(c_opad, c_blocksize);
     l_ipad := utl_raw.copies(c_ipad, c_blocksize);
 
-    if utl_raw.length(utl_raw.cast_to_raw(p_key)) > c_blocksize then
-      l_key := utl_raw.cast_to_raw(/*sha256.*/encrypt(p_key));
+    if utl_raw.length(p_key) > c_blocksize then
+      l_key := utl_raw.cast_to_raw(/*sha256.*/encrypt_raw(p_key));
     else
-      l_key := utl_raw.cast_to_raw(p_key);
+      l_key := p_key;
     end if;
 
     l_key := l_key || utl_raw.copies(c_kpad, c_blocksize - utl_raw.length(l_key));
 
-    return /*sha256.*/encrypt_raw (
-             utl_raw.bit_xor(l_key, l_opad) ||
+    return hextoraw (
              /*sha256.*/encrypt_raw (
-               utl_raw.bit_xor(l_key, l_ipad) ||
-               utl_raw.cast_to_raw(p_text)
+               utl_raw.bit_xor(l_key, l_opad) ||
+               /*sha256.*/encrypt_raw (
+                 utl_raw.bit_xor(l_key, l_ipad) ||
+                 p_text
+               )
              )
            );
-  END HMAC_SHA256;
+  END HMAC_SHA256_RAW;
 
 BEGIN
   -- Fill Buffer Initialization

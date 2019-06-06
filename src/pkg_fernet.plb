@@ -50,6 +50,16 @@ create or replace package body pkg_fernet as
     return utl_raw.substr(p_data, 1, utl_raw.length(p_data) - l_pad_size);
   end pkcs7_trim;
 
+  function base64url_encode(p_input in raw) return varchar2 is
+  begin
+    return replace(replace(replace(replace(utl_i18n.raw_to_char(utl_encode.base64_encode(p_input), 'AL32UTF8'), '+', '-'), '/' , '_'), chr(13)), chr(10));
+  end base64url_encode;
+
+  function base64url_decode(p_input in varchar2) return raw is
+  begin
+    return utl_encode.base64_decode(utl_i18n.string_to_raw(replace(replace(p_input, '-', '+'), '_', '/'), 'AL32UTF8'));
+  end base64url_decode;
+
   function encrypt(p_key in varchar2, p_data in varchar2) return varchar2 is
     c_version        constant raw(1) := hextoraw(to_char('128', 'fmxxx'));
     --
@@ -57,7 +67,6 @@ create or replace package body pkg_fernet as
     l_iv             raw(16);
     --
     l_key            raw(2000);
-    --l_key_base64url  varchar2(44);
     l_signing_key    raw(16);
     l_encryption_key raw(16);
     --
@@ -68,14 +77,12 @@ create or replace package body pkg_fernet as
     l_basic_parts    raw(32760);
     l_hmac           raw(32);
   begin
-    l_key := base64url_decode(p_key); -- Decode base64 key
-    l_key := hextoraw(sha256.encrypt_raw(l_key)); -- Apply SHA256 hash to always guarantee a 256 bits key
+    l_key := base64url_decode(p_key); -- Decode base64url key
 
     if utl_raw.length(l_key) != 32 then
       raise_application_error(-20001, 'Fernet key must be 32 url-safe base64-encoded bytes.');
     end if;
 
-    --l_key_base64url  := pkg_fernet.base64url_encode_raw(l_key);
     l_signing_key    := utl_raw.substr(r => l_key, pos => 1,  len => 16);
     l_encryption_key := utl_raw.substr(r => l_key, pos => 17, len => 16);
 
@@ -103,13 +110,10 @@ create or replace package body pkg_fernet as
 
     l_hmac := sha256.hmac_sha256_raw(p_text => l_basic_parts, p_key => l_signing_key);
 
-    return base64url_encode_raw(utl_raw.concat(l_basic_parts, l_hmac));
+    return base64url_encode(utl_raw.concat(l_basic_parts, l_hmac));
   end encrypt;
 
   function decrypt(p_key in varchar2, p_token in varchar2) return varchar2 is
-    invalid_token exception;
-    pragma exception_init(invalid_token, -20001);
-    --
     l_data   raw(32760);
     l_length number;
     --
@@ -136,16 +140,10 @@ create or replace package body pkg_fernet as
       raise_application_error(-20001, 'Token is not base64url');
     end;
 
-    l_key := base64url_decode(p_key); -- Decode base64 key
-    l_key := hextoraw(sha256.encrypt_raw(l_key)); -- Apply SHA256 hash to always guarantee a 256 bits key
-
-    if utl_raw.length(l_key) != 32 then
-      raise_application_error(-20001, 'Fernet key must be 32 url-safe base64-encoded bytes.');
-    end if;
-
-    --l_key_base64url  := pkg_fernet.base64url_encode_raw(l_key);
+    l_key := base64url_decode(p_key); -- Decode base64url key
     l_signing_key    := utl_raw.substr(r => l_key, pos => 1,  len => 16);
     l_encryption_key := utl_raw.substr(r => l_key, pos => 17, len => 16);
+
     -- Assing values
     l_length     := utl_raw.length(l_data);
     l_version    := utl_raw.substr(r => l_data, pos => 1,  len => 1);
@@ -201,24 +199,7 @@ create or replace package body pkg_fernet as
     end;
 
     return utl_i18n.raw_to_char(l_plaintext, 'AL32UTF8');
-  --exception when others then
-  --  raise_application_error(-20001, 'Invalid token');
   end decrypt;
-
-  function base64url_encode(p_input in varchar2) return varchar2 is
-  begin
-    return base64url_encode_raw(utl_i18n.string_to_raw(p_input, 'AL32UTF8'));
-  end base64url_encode;
-
-  function base64url_encode_raw(p_input in raw) return varchar2 is
-  begin
-    return replace(replace(replace(replace(utl_i18n.raw_to_char(utl_encode.base64_encode(p_input), 'AL32UTF8'), '+', '-'), '/' , '_'), chr(13)), chr(10));
-  end base64url_encode_raw;
-
-  function base64url_decode(p_input in varchar2) return raw is
-  begin
-    return utl_encode.base64_decode(utl_i18n.string_to_raw(replace(replace(p_input, '-', '+'), '_', '/'), 'AL32UTF8'));
-  end base64url_decode;
 
   function generate_key return varchar2 is
     c_key_length number := 256 / 8;
@@ -226,7 +207,17 @@ create or replace package body pkg_fernet as
   begin
     l_key := dbms_crypto.randombytes(c_key_length);
 
-    return pkg_fernet.base64url_encode_raw(l_key);
+    return base64url_encode(l_key);
   end generate_key;
+
+  function encode_key(p_key in varchar2) return varchar2 is
+    l_key           raw(32760);
+    l_key_base64url varchar2(44);
+  begin
+    l_key := utl_i18n.string_to_raw(p_key, 'AL32UTF8');
+    l_key := hextoraw(sha256.encrypt_raw(l_key)); -- Apply SHA256 hash to always guarantee a 256 bits key
+
+    return base64url_encode(l_key);
+  end encode_key;
 end pkg_fernet;
 /

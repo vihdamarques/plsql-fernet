@@ -75,6 +75,7 @@ create or replace PACKAGE SHA256 IS
                                     len IN NUMBER,
                                     ctx IN OUT NOCOPY TR_CTX);
 
+
     /* Process the remaining bytes in the buffer and put result from CTX
        in first 32 bytes following RESBUF.
 
@@ -102,9 +103,10 @@ create or replace PACKAGE SHA256 IS
     /* Final Function */
     FUNCTION ENCRYPT(x IN VARCHAR2) RETURN VARCHAR2;
     FUNCTION ENCRYPT_RAW(x IN RAW) RETURN VARCHAR2;
-    
+
     /*HMAC Function for SHA256 based on https://stackoverflow.com/a/50876832/1199710*/
     FUNCTION HMAC_SHA256(P_TEXT IN VARCHAR2, P_KEY IN VARCHAR2) RETURN VARCHAR2;
+    FUNCTION HMAC_SHA256_RAW(P_TEXT IN RAW, P_KEY IN RAW) RETURN RAW;
 
 END SHA256;
 /
