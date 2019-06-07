@@ -29,3 +29,4 @@ If your schema doesn't have the right permissions, you can grant it using the fo
 
 ## Notes
 * If you are using Oracle 12c+ you can get rid of the sha256 package and use the standard DBMS_CRYPTO SHA256 support.
+* The SHA256 package was forked from [this repository](https://github.com/CruiserX/sha256_plsql)
