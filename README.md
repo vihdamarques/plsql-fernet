@@ -4,7 +4,7 @@ PL/SQL implementation of the Fernet symetric encryption method
 ## Example
     declare
       l_key       varchar2(44);
-      l_cipher    varchar2(32000);
+      l_token     varchar2(32000);
       l_plaintext varchar2(32000);
     begin
       -- You can generate a random strong key (recommended)
@@ -13,10 +13,10 @@ PL/SQL implementation of the Fernet symetric encryption method
       --l_key := pkg_fernet.encode_key('anykey123##');
       dbms_output.put_line('key: ' || l_key);
 
-      l_cipher := pkg_fernet.encrypt(l_key, 'Crypto Test');
-      dbms_output.put_line('Cipher: ' || l_cipher);
+      l_token := pkg_fernet.encrypt(l_key, 'Crypto Test');
+      dbms_output.put_line('Token: ' || l_token);
 
-      l_plaintext := pkg_fernet.decrypt(l_key, l_cipher);
+      l_plaintext := pkg_fernet.decrypt(l_key, l_token);
       dbms_output.put_line('Plain text: ' || l_plaintext);
     end;
     /
