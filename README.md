@@ -1,7 +1,9 @@
 # plsql-fernet
+
 PL/SQL implementation of the Fernet symetric encryption method
 
 ## Example
+
     declare
       l_key       varchar2(44);
       l_token     varchar2(32000);
@@ -22,11 +24,9 @@ PL/SQL implementation of the Fernet symetric encryption method
     /
 
 ## Compatibility
-This package can be used on Oracle 10g+ database in a DBMS_CRYPTO execute granted schema.
-If your schema doesn't have the right permissions, you can grant it using the following command as sysdba:
+
+From now on, this package can only be used on Oracle 12c+ because of the SH256 support on DBMS_CRYPTO. If you need to run it on 10g or 11g you can refer to [this repository](https://github.com/CruiserX/sha256_plsql) so you can implement your own version.
+
+It's necessary to have execute grant on DBMS_CRYPTO package. If your schema doesn't have the right permissions, you can grant using the following command as sysdba:
 
     grant execute on sys.dbms_crypto to SCHEMA;
-
-## Notes
-* If you are using Oracle 12c+ you can get rid of the sha256 package and use the standard DBMS_CRYPTO SHA256 support.
-* The SHA256 package was forked from [this repository](https://github.com/CruiserX/sha256_plsql)
