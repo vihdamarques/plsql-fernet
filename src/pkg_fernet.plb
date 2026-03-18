@@ -426,7 +426,7 @@ create or replace package body pkg_fernet as
     l_key := utl_i18n.string_to_raw(p_key, 'AL32UTF8');
     --
     l_key := dbms_crypto.hash(
-      src => p_key,
+      src => l_key,
       typ => dbms_crypto.HASH_SH256
     );
     --
